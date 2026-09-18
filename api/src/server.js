@@ -36,7 +36,7 @@ const sql = async (text, params = []) => {
 
 async function initDb() {
   if (!pool) return;
-  await sql(\`
+  await sql(`
     create table if not exists users (
       id bigserial primary key,
       email text unique not null,
@@ -80,7 +80,7 @@ async function initDb() {
     );
     create index if not exists idx_comments_video on comments(video_id, created_at desc);
     create index if not exists idx_history_user on history(user_id, watched_at desc);
-  \`);
+  `);
 }
 
 function tokenFrom(req) {
@@ -111,12 +111,12 @@ function putCache(key, value, ttl = CACHE_TTL) {
 async function yt(path, params = {}) {
   if (!process.env.YOUTUBE_API_KEY) throw new Error("YOUTUBE_API_KEY is not configured.");
   const query = new URLSearchParams({ key: process.env.YOUTUBE_API_KEY, ...params });
-  const keyless = \`\${path}?\${query.toString().replace(process.env.YOUTUBE_API_KEY, "redacted")}\`;
+  const keyless = `${path}?${query.toString().replace(process.env.YOUTUBE_API_KEY, "redacted")}`;
   const hit = cached(keyless);
   if (hit) return hit;
-  const response = await fetch(\`https://www.googleapis.com/youtube/v3/\${path}?\${query}\`);
+  const response = await fetch(`https://www.googleapis.com/youtube/v3/${path}?${query}`);
   const data = await response.json();
-  if (!response.ok) throw new Error(data?.error?.message || \`YouTube API error \${response.status}\`);
+  if (!response.ok) throw new Error(data?.error?.message || `YouTube API error ${response.status}`);
   return putCache(keyless, data);
 }
 function duration(iso = "") {
@@ -126,8 +126,8 @@ function duration(iso = "") {
 function durationText(sec) {
   const s = Math.max(0, Number(sec || 0));
   return s >= 3600
-    ? \`\${Math.floor(s / 3600)}:\${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:\${String(s % 60).padStart(2, "0")}\`
-    : \`\${Math.floor(s / 60)}:\${String(s % 60).padStart(2, "0")}\`;
+    ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+    : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 function normalize(items) {
   return items.map((item) => {
@@ -141,8 +141,8 @@ function normalize(items) {
       channelId: item.snippet.channelId || "",
       channelTitle: item.snippet.channelTitle || "Unknown creator",
       publishedAt: item.snippet.publishedAt || null,
-      thumbnail: item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || \`https://i.ytimg.com/vi/\${id}/hqdefault.jpg\`,
-      thumbMedium: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || \`https://i.ytimg.com/vi/\${id}/mqdefault.jpg\`,
+      thumbnail: item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      thumbMedium: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || `https://i.ytimg.com/vi/${id}/mqdefault.jpg`,
       duration: seconds,
       durationText: durationText(seconds),
       views: Number(item.statistics?.viewCount || 0),
@@ -217,7 +217,7 @@ app.get("/api/video/:id", async (req, res) => {
     const raw = data.items[0];
     const video = normalize([raw])[0];
     const channelData = video.channelId ? await yt("channels", { part: "snippet,statistics", id: video.channelId }) : { items: [] };
-    res.json({ video, channel: channelData.items?.[0] || null, embedUrl: \`https://www.youtube.com/embed/\${video.id}\` });
+    res.json({ video, channel: channelData.items?.[0] || null, embedUrl: `https://www.youtube.com/embed/${video.id}` });
   } catch (e) { res.status(502).json({ error: e.message }); }
 });
 app.get("/api/channel/:id", async (req, res) => {
@@ -292,18 +292,18 @@ app.get("/api/actions/:videoId", requireAuth, async (req, res) => {
 app.post("/api/actions/:videoId", requireAuth, async (req, res) => {
   const liked = Boolean(req.body.liked);
   const saved = Boolean(req.body.saved);
-  await sql(\`insert into video_actions(user_id,video_id,liked,saved,updated_at)
+  await sql(`insert into video_actions(user_id,video_id,liked,saved,updated_at)
     values($1,$2,$3,$4,now())
-    on conflict(user_id,video_id) do update set liked=excluded.liked,saved=excluded.saved,updated_at=now()\`,
+    on conflict(user_id,video_id) do update set liked=excluded.liked,saved=excluded.saved,updated_at=now()`,
     [req.user.id, req.params.videoId, liked, saved]);
   res.json({ liked, saved });
 });
 app.post("/api/history", requireAuth, async (req, res) => {
   const id = String(req.body.videoId || "");
   if (!id) return res.status(400).json({ error: "videoId required" });
-  await sql(\`insert into history(user_id,video_id,title,channel_title,thumbnail,watched_at)
+  await sql(`insert into history(user_id,video_id,title,channel_title,thumbnail,watched_at)
     values($1,$2,$3,$4,$5,now())
-    on conflict(user_id,video_id) do update set title=excluded.title,channel_title=excluded.channel_title,thumbnail=excluded.thumbnail,watched_at=now()\`,
+    on conflict(user_id,video_id) do update set title=excluded.title,channel_title=excluded.channel_title,thumbnail=excluded.thumbnail,watched_at=now()`,
     [req.user.id, id, String(req.body.title || "Untitled"), String(req.body.channelTitle || "Creator"), String(req.body.thumbnail || "")]);
   res.json({ ok: true });
 });
@@ -333,8 +333,8 @@ app.post("/api/comments", requireAuth, async (req, res) => {
 app.use((_req, res) => res.status(404).json({ error: "Not found." }));
 
 initDb()
-  .then(() => app.listen(port, "0.0.0.0", () => console.log(\`NovaTube API listening on \${port}\`)))
+  .then(() => app.listen(port, "0.0.0.0", () => console.log(`NovaTube API listening on ${port}`)))
   .catch((error) => {
     console.error("Database initialization failed:", error.message);
-    app.listen(port, "0.0.0.0", () => console.log(\`NovaTube API listening on \${port} without database\`));
+    app.listen(port, "0.0.0.0", () => console.log(`NovaTube API listening on ${port} without database`));
   });
