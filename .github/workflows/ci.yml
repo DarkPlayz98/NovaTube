@@ -13,10 +13,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            web/package-lock.json
-            api/package-lock.json
       - name: API install
         working-directory: api
         run: npm install
