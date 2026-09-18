@@ -165,6 +165,7 @@ function App() {
   const [channel, setChannel] = useState(null);
   const [history, setHistory] = useState(() => local.get("novatube_history", []));
   const [saved, setSaved] = useState(() => local.get("novatube_saved", []));
+  const [savedVideos, setSavedVideos] = useState(() => local.get("novatube_saved_videos", []));
   const [liked, setLiked] = useState(() => local.get("novatube_liked", []));
   const [subscriptions, setSubscriptions] = useState(() => local.get("novatube_subscriptions", []));
   const [notInterested, setNotInterested] = useState(() => local.get("novatube_not_interested", []));
@@ -269,6 +270,11 @@ function App() {
       const has = old.includes(video.id);
       const next = has ? old.filter((id) => id !== video.id) : [...old, video.id];
       local.set("novatube_" + kind, next);
+      if (kind === "saved") {
+        const nextVideos = has ? savedVideos.filter((x) => x.id !== video.id) : [{...video}, ...savedVideos.filter((x) => x.id !== video.id)].slice(0, 100);
+        setSavedVideos(nextVideos);
+        local.set("novatube_saved_videos", nextVideos);
+      }
       if (user) {
         const body = JSON.stringify({ liked: kind === "liked" ? !has : liked.includes(video.id), saved: kind === "saved" ? !has : saved.includes(video.id) });
         api("/api/actions/" + video.id, {method:"POST", body}).catch(() => {});
@@ -387,6 +393,7 @@ function App() {
     if (next === "shorts") loadMode("shorts");
     if (next === "live") loadMode("live");
     if (next === "subscriptions") setVideos([]);
+    if (["music","gaming","news","recent"].includes(next)) loadMode(next);
   }
 
   if (!device) {
@@ -488,12 +495,12 @@ function App() {
           {active === "saved" && (
             <>
               <section className="section-head"><div><h2>Saved</h2><span>{saved.length} saved videos.</span></div></section>
-              {!saved.length ? <Empty title="Nothing saved yet" text="Use the save button on any video to keep it here."/> : <section className="video-grid">{videos.filter((v)=>saved.includes(v.id)).map((v)=><VideoCard key={v.id} video={v} lite={lite} onOpen={openVideo} onChannel={openChannel} onLike={(x)=>toggleList("liked",x)} liked={liked.includes(v.id)} onSave={(x)=>toggleList("saved",x)} saved={saved.includes(v.id)} onShare={share} onNotInterested={hide}/>)}</section>}
+              {!saved.length ? <Empty title="Nothing saved yet" text="Use the save button on any video to keep it here."/> : <section className="video-grid">{savedVideos.filter((v)=>saved.includes(v.id)).map((v)=><VideoCard key={v.id} video={v} lite={lite} onOpen={openVideo} onChannel={openChannel} onLike={(x)=>toggleList("liked",x)} liked={liked.includes(v.id)} onSave={(x)=>toggleList("saved",x)} saved={saved.includes(v.id)} onShare={share} onNotInterested={hide}/>)}</section>}
             </>
           )}
 
           {active === "watch" && selected && (
-            <WatchPage video={selected} comments={comments} commentText={commentText} setCommentText={setCommentText} onSubmitComment={submitComment} user={user} onBack={()=>setActive("home")} onLike={()=>toggleList("liked",selected)} liked={liked.includes(selected.id)} onSave={()=>toggleList("saved",selected)} saved={saved.includes(selected.id)} onShare={()=>share(selected)} onChannel={()=>openChannel(selected.channelId)} />
+            <WatchPage video={selected} comments={comments} commentText={commentText} setCommentText={setCommentText} onSubmitComment={submitComment} onSignIn={()=>setAuthOpen(true)} user={user} onBack={()=>setActive("home")} onLike={()=>toggleList("liked",selected)} liked={liked.includes(selected.id)} onSave={()=>toggleList("saved",selected)} saved={saved.includes(selected.id)} onShare={()=>share(selected)} onChannel={()=>openChannel(selected.channelId)} />
           )}
 
           {active === "channel" && channel && (
@@ -511,7 +518,7 @@ function App() {
   );
 }
 
-function WatchPage({video,comments,commentText,setCommentText,onSubmitComment,user,onBack,onLike,liked,onSave,saved,onShare,onChannel}) {
+function WatchPage({video,comments,commentText,setCommentText,onSubmitComment,onSignIn,user,onBack,onLike,liked,onSave,saved,onShare,onChannel}) {
   return <div className="watch-page">
     <button className="back-button" onClick={onBack}>← Back</button>
     <div className="watch-layout">
@@ -527,7 +534,7 @@ function WatchPage({video,comments,commentText,setCommentText,onSubmitComment,us
         <button className="watch-channel" onClick={onChannel}><span className="creator-avatar">{(video.channelTitle||"N")[0]}</span><span><b>{video.channelTitle}</b><small>Creator channel</small></span></button>
         <div className="description">{video.description || "No description was provided."}</div>
         <section className="comments"><h2>NovaTube comments</h2><p className="muted">These are comments stored by NovaTube, separate from YouTube comments.</p>
-          {user ? <form className="comment-form" onSubmit={onSubmitComment}><input value={commentText} onChange={(e)=>setCommentText(e.target.value)} placeholder="Add a comment…"/><button>Post</button></form> : <button className="sign-in wide" type="button">Sign in to comment</button>}
+          {user ? <form className="comment-form" onSubmit={onSubmitComment}><input value={commentText} onChange={(e)=>setCommentText(e.target.value)} placeholder="Add a comment…"/><button>Post</button></form> : <button className="sign-in wide" type="button" onClick={onSignIn}>Sign in to comment</button>}
           {comments.map((c)=><div className="comment" key={c.id}><span className="creator-avatar">{(c.displayName||"N")[0]}</span><div><b>{c.displayName}</b><small>{age(c.createdAt)}</small><p>{c.body}</p></div></div>)}
           {!comments.length && <div className="empty-inline">No NovaTube comments yet.</div>}
         </section>
