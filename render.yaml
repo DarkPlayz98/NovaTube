@@ -3,15 +3,22 @@ services:
     name: novatube-api
     runtime: node
     rootDir: api
-    buildCommand: npm install
+    buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /health
+    autoDeployTrigger: commit
     envVars:
       - key: PORT
         value: 10000
+      - key: WEB_ORIGIN
+        sync: false
       - key: YOUTUBE_API_KEY
         sync: false
       - key: DATABASE_URL
         sync: false
-      - key: KEY_VALUE_URL
-        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: novatube-db
+    plan: free
