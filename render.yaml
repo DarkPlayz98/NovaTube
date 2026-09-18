@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: novatube-api
+    runtime: node
+    rootDir: api
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: YOUTUBE_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: KEY_VALUE_URL
+        sync: false
