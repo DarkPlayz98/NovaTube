@@ -1,0 +1,31 @@
+name: NovaTube CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            api/package-lock.json
+      - name: API install
+        working-directory: api
+        run: npm install
+      - name: API syntax
+        working-directory: api
+        run: npm run check
+      - name: Web install
+        working-directory: web
+        run: npm install
+      - name: Web build
+        working-directory: web
+        run: npm run build
