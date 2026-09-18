@@ -18,8 +18,15 @@ const pool = process.env.DATABASE_URL
 const cache = new Map();
 const jwtSecret = process.env.JWT_SECRET || "novatube-development-secret";
 const CACHE_TTL = 45_000;
+const allowedOrigins = webOrigin === "*" ? null : new Set(webOrigin.split(",").map((x) => x.trim()).filter(Boolean));
 
-app.use(cors({ origin: webOrigin === "*" ? true : webOrigin.split(",").map((x) => x.trim()), credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || !allowedOrigins || allowedOrigins.has(origin)) return callback(null, true);
+    return callback(new Error("Origin not allowed by NovaTube API."));
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: "256kb" }));
 
 const sql = async (text, params = []) => {
