@@ -333,6 +333,7 @@ app.post("/api/comments", requireAuth, async (req, res) => {
 app.use((_req, res) => res.status(404).json({ error: "Not found." }));
 
 export { app, initDb };
+export default app;
 
 if (!process.env.VERCEL) {
   initDb()
