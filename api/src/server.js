@@ -332,9 +332,13 @@ app.post("/api/comments", requireAuth, async (req, res) => {
 
 app.use((_req, res) => res.status(404).json({ error: "Not found." }));
 
-initDb()
-  .then(() => app.listen(port, "0.0.0.0", () => console.log(`NovaTube API listening on ${port}`)))
-  .catch((error) => {
-    console.error("Database initialization failed:", error.message);
-    app.listen(port, "0.0.0.0", () => console.log(`NovaTube API listening on ${port} without database`));
-  });
+export { app, initDb };
+
+if (!process.env.VERCEL) {
+  initDb()
+    .then(() => app.listen(port, "0.0.0.0", () => console.log(`NovaTube API listening on ${port}`)))
+    .catch((error) => {
+      console.error("Database initialization failed:", error.message);
+      app.listen(port, "0.0.0.0", () => console.log(`NovaTube API listening on ${port} without database`));
+    });
+}
