@@ -308,7 +308,7 @@ app.post("/api/history", requireAuth, async (req, res) => {
   res.json({ ok: true });
 });
 app.get("/api/history", requireAuth, async (req, res) => {
-  const result = await sql("select video_id as id,title,channel_title as \\"channelTitle\\",thumbnail,watched_at as \\"watchedAt\\" from history where user_id=$1 order by watched_at desc limit 100", [req.user.id]);
+  const result = await sql("select video_id as id,title,channel_title as \"channelTitle\",thumbnail,watched_at as \"watchedAt\" from history where user_id=$1 order by watched_at desc limit 100", [req.user.id]);
   res.json({ items: result.rows });
 });
 app.delete("/api/history", requireAuth, async (req, res) => {
@@ -317,7 +317,7 @@ app.delete("/api/history", requireAuth, async (req, res) => {
 });
 app.get("/api/comments/:videoId", async (req, res) => {
   if (!pool) return res.json({ items: [] });
-  const result = await sql("select id,display_name as \\"displayName\\",body,created_at as \\"createdAt\\" from comments where video_id=$1 order by created_at desc limit 100", [req.params.videoId]);
+  const result = await sql("select id,display_name as \"displayName\",body,created_at as \"createdAt\" from comments where video_id=$1 order by created_at desc limit 100", [req.params.videoId]);
   res.json({ items: result.rows });
 });
 app.post("/api/comments", requireAuth, async (req, res) => {
@@ -326,7 +326,7 @@ app.post("/api/comments", requireAuth, async (req, res) => {
   if (!videoId || !body || body.length > 1000) return res.status(400).json({ error: "Comment must be between 1 and 1000 characters." });
   const row = await sql("select display_name from users where id=$1", [req.user.id]);
   const displayName = row.rows[0]?.display_name || "NovaTube user";
-  const result = await sql("insert into comments(user_id,video_id,display_name,body) values($1,$2,$3,$4) returning id,display_name as \\"displayName\\",body,created_at as \\"createdAt\\"", [req.user.id, videoId, displayName, body]);
+  const result = await sql("insert into comments(user_id,video_id,display_name,body) values($1,$2,$3,$4) returning id,display_name as \"displayName\",body,created_at as \"createdAt\"", [req.user.id, videoId, displayName, body]);
   res.status(201).json({ comment: result.rows[0] });
 });
 
