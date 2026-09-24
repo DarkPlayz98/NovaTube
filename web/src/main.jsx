@@ -55,7 +55,13 @@ function thumb(video, lite=false) {
 }
 
 async function api(path, options={}) {
-  const token = local.get("novatube_token", "");
+  let token = local.get("novatube_token", "");
+  if (firebaseConfigured && auth?.currentUser) {
+    try {
+      token = await getIdToken(auth.currentUser);
+      local.set("novatube_token", token);
+    } catch {}
+  }
   const headers = { "Content-Type":"application/json", ...(options.headers || {}) };
   if (token) headers.Authorization = "Bearer " + token;
   const res = await fetch(API + path, { ...options, headers });
