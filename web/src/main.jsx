@@ -700,3 +700,5 @@ function Auth({mode,setMode,onSubmit,onGoogle,error,firebaseReady}) {
     <button className="text-button center" onClick={()=>setMode(mode==="login"?"register":"login")}>{mode==="login" ? "Create a new account" : "I already have an account"}</button>
   </div>;
 }
+
+createRoot(document.getElementById("root")).render(<App />);
