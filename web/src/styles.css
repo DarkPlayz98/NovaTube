@@ -2073,3 +2073,106 @@ footer {
   .sign-in { padding-inline: 9px; }
   .spec-grid { grid-template-columns: 1fr; }
 }
+
+
+/* Final mobile stability patch */
+html, body, #root {
+  width: 100%;
+  min-width: 320px;
+  overflow-x: hidden;
+}
+
+@media (max-width: 780px) {
+  .layout {
+    display: block !important;
+    width: 100%;
+  }
+
+  .main {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 62px !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 2px !important;
+    padding: 5px 7px calc(5px + env(safe-area-inset-bottom)) !important;
+    border: 0 !important;
+    border-top: 1px solid var(--md-outline-variant) !important;
+    border-radius: 0 !important;
+    background: rgba(250,249,255,.97) !important;
+    overflow: hidden !important;
+  }
+
+  .sidebar .nav-item {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    margin: 0 !important;
+    padding: 4px 2px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    border-radius: 14px !important;
+    text-align: center !important;
+    font-size: 9px !important;
+    line-height: 1.1 !important;
+  }
+
+  .sidebar .nav-item span {
+    width: auto !important;
+    min-width: 0 !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+  }
+
+  .sidebar .nav-item:nth-child(n+6),
+  .sidebar .side-divider,
+  .sidebar .side-cap {
+    display: none !important;
+  }
+
+  .chips {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .hero {
+    width: auto;
+    max-width: none;
+    overflow: hidden;
+  }
+
+  .hero h1 {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .video-grid {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  @media (max-width: 780px) {
+    .sidebar {
+      background: rgba(16,17,20,.97) !important;
+    }
+  }
+}
