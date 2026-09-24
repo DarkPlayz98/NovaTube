@@ -1721,3 +1721,40 @@ footer {
     backdrop-filter: none;
   }
 }
+
+
+.creator-avatar,
+.short-avatar {
+  overflow: hidden;
+  padding: 0;
+}
+
+.creator-avatar img,
+.short-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 24px;
+  margin-left: 7px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .05em;
+  vertical-align: middle;
+}
+
+.creator-row .creator-avatar {
+  overflow: hidden;
+}
