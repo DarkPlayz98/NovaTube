@@ -276,13 +276,19 @@ function App() {
     } catch {}
   }
 
-  function searchNow(e) {
+  async function searchNow(e) {
     e?.preventDefault();
     const q = query.trim();
-    if (!q) return setActive("home");
+    if (!q) {
+      setSearched("");
+      setActive("home");
+      loadMode("home");
+      return;
+    }
     setSearched(q);
     setActive("search");
-    loadMode("home", q);
+    local.set("novatube_searches", [...new Set([q, ...local.get("novatube_searches", [])])].slice(0, 30));
+    await loadMode("home", q);
   }
 
   function applyLocal(videoList) {
@@ -462,13 +468,13 @@ function App() {
   }
 
   if (!device) {
-    return <div className="boot"><div className="boot-logo">N</div><h1>NovaTube</h1><p>Checking device capabilities before loading your interface…</p></div>;
+    return <div className="boot"><img className="boot-logo" src="/icon.svg" alt="NovaTube" /><h1>NovaTube</h1><p>Checking device capabilities before loading your interface…</p></div>;
   }
 
   return (
     <div className={"app mode-" + (performance === "auto" ? device.mode : performance)}>
       <header className="topbar">
-        <button className="brand" onClick={() => selectNav("home")}><span className="brand-mark">N</span><span>NovaTube</span></button>
+        <button className="brand" onClick={() => selectNav("home")} aria-label="NovaTube home"><img className="brand-mark" src="/icon.svg" alt="" /><span>NovaTube</span></button>
         <form className="search" onSubmit={searchNow}>
           <span>⌕</span>
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search videos, creators and Shorts" />
@@ -513,7 +519,11 @@ function App() {
             <>
               <section className="section-head"><div><h2>Search</h2><span>{searched ? "Results for “" + searched + "”" : "Search NovaTube"}</span></div></section>
               <section className="search-banner">
-                <form onSubmit={searchNow}><input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search again…"/><button>Search</button></form>
+                <form onSubmit={searchNow} role="search">
+                  <span className="search-banner-icon">⌕</span>
+                  <input autoFocus value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="Search videos, creators and Shorts…" aria-label="Search videos" />
+                  <button type="submit">Search</button>
+                </form>
               </section>
               <section className="video-grid">{applyLocal(videos).map((v) => <VideoCard key={v.id} video={v} lite={lite} onOpen={openVideo} onChannel={openChannel} onLike={(x)=>toggleList("liked",x)} liked={liked.includes(v.id)} onSave={(x)=>toggleList("saved",x)} saved={saved.includes(v.id)} onShare={share} onNotInterested={hide}/>)}</section>
             </>
