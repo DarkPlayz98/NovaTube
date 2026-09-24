@@ -155,15 +155,34 @@ function normalize(items) {
   }).filter(Boolean);
 }
 async function feed({ mode, q, pageToken }) {
+  const cleanQuery = String(q || "").trim();
+
+  // Home uses YouTube's mostPopular chart so the feed works without requiring
+  // an artificial search query. Search-based modes use targeted queries.
+  if (mode === "home" && !cleanQuery) {
+    const popular = await yt("videos", {
+      part: "snippet,contentDetails,statistics,liveStreamingDetails",
+      chart: "mostPopular",
+      regionCode: process.env.YOUTUBE_REGION_CODE || "IN",
+      maxResults: "24",
+      ...(pageToken ? { pageToken } : {})
+    });
+    return {
+      items: normalize(popular.items || []),
+      nextPageToken: popular.nextPageToken || null
+    };
+  }
+
   const spec = {
-    home: { order: "relevance" },
-    recent: { order: "date" },
-    music: { order: "relevance", q: q || "music" },
-    gaming: { order: "relevance", q: q || "gaming" },
-    news: { order: "date", q: q || "news" },
-    shorts: { order: "date", q: q || "shorts", videoDuration: "short" },
-    live: { order: "date", eventType: "live" }
-  }[mode] || { order: "relevance" };
+    home: { order: "relevance", q: cleanQuery || "trending videos" },
+    recent: { order: "date", q: cleanQuery || "latest videos" },
+    music: { order: "relevance", q: cleanQuery || "music" },
+    gaming: { order: "relevance", q: cleanQuery || "gaming" },
+    news: { order: "date", q: cleanQuery || "news" },
+    shorts: { order: "date", q: cleanQuery || "shorts", videoDuration: "short" },
+    live: { order: "date", q: cleanQuery || "live", eventType: "live" }
+  }[mode] || { order: "relevance", q: cleanQuery || "trending videos" };
+
   const params = {
     part: "snippet",
     type: "video",
@@ -171,22 +190,28 @@ async function feed({ mode, q, pageToken }) {
     order: spec.order,
     videoEmbeddable: "true"
   };
+
   if (spec.q) params.q = spec.q;
   if (spec.eventType) params.eventType = spec.eventType;
   if (spec.videoDuration) params.videoDuration = spec.videoDuration;
   if (pageToken) params.pageToken = pageToken;
-  if (q && ["home", "recent"].includes(mode)) params.q = q;
 
   const search = await yt("search", params);
-  const ids = search.items.map((item) => item.id?.videoId).filter(Boolean);
+  const ids = (search.items || []).map((item) => item.id?.videoId).filter(Boolean);
   if (!ids.length) return { items: [], nextPageToken: null };
+
   const details = await yt("videos", {
     part: "snippet,contentDetails,statistics,liveStreamingDetails",
     id: ids.join(",")
   });
-  const byId = new Map(details.items.map((item) => [item.id, item]));
+
+  const byId = new Map((details.items || []).map((item) => [item.id, item]));
+
   return {
-    items: normalize(search.items.map((item) => ({ ...item, ...byId.get(item.id?.videoId) }))),
+    items: normalize((search.items || []).map((item) => ({
+      ...item,
+      ...byId.get(item.id?.videoId)
+    }))),
     nextPageToken: search.nextPageToken || null
   };
 }
