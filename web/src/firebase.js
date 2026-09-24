@@ -1,7 +1,14 @@
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
-  GoogleAuthProvider
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged,
+  signOut,
+  getIdToken
 } from "firebase/auth";
 
 const firebaseConfig = {
@@ -15,8 +22,20 @@ const firebaseConfig = {
 
 export const firebaseConfigured = Object.values(firebaseConfig).every(Boolean);
 const app = firebaseConfigured ? initializeApp(firebaseConfig) : null;
+
 export const auth = app ? getAuth(app) : null;
 export const googleProvider = new GoogleAuthProvider();
+
 if (firebaseConfigured) {
   googleProvider.setCustomParameters({ prompt: "select_account" });
 }
+
+export {
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged,
+  signOut,
+  getIdToken
+};
