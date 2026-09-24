@@ -114,7 +114,9 @@ function VideoCard({ video, lite, onOpen, onChannel, onLike, liked, onSave, save
         {video.live && <span className="live-dot">● LIVE</span>}
       </button>
       <div className="video-meta">
-        <button className="creator-avatar" onClick={() => onChannel(video.channelId)}>{(video.channelTitle || "N")[0]}</button>
+        <button className="creator-avatar" onClick={() => onChannel(video.channelId)} aria-label={"Open " + (video.channelTitle || "creator")}>
+          {video.channelThumbnail ? <img src={video.channelThumbnail} alt="" loading="lazy" /> : (video.channelTitle || "N")[0]}
+        </button>
         <div className="video-copy">
           <button className="video-title" onClick={() => onOpen(video)}>{video.title}</button>
           <button className="channel-name" onClick={() => onChannel(video.channelId)}>{video.channelTitle}</button>
@@ -145,7 +147,9 @@ function ShortCard({ video, active, lite, onOpen, onLike, liked, onSave, saved, 
         ) : <img src={thumb(video, lite)} alt="" loading="lazy" />}
         <div className="short-gradient"/>
         <div className="short-info">
-          <button className="short-avatar" onClick={() => onChannel(video.channelId)}>{(video.channelTitle || "N")[0]}</button>
+          <button className="short-avatar" onClick={() => onChannel(video.channelId)} aria-label={"Open " + (video.channelTitle || "creator")}>
+            {video.channelThumbnail ? <img src={video.channelThumbnail} alt="" loading="lazy" /> : (video.channelTitle || "N")[0]}
+          </button>
           <div>
             <button className="short-channel" onClick={() => onChannel(video.channelId)}>@{video.channelTitle}</button>
             <h3>{video.title}</h3>
@@ -393,24 +397,40 @@ function App() {
   async function submitAuth(e) {
     e.preventDefault();
     setAuthError("");
-    if (!firebaseConfigured) {
-      setAuthError("Firebase Auth is not configured. Add the VITE_FIREBASE_* variables to the web deployment.");
-      return;
-    }
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") || "").trim();
     const password = String(form.get("password") || "");
+    const displayName = String(form.get("displayName") || "").trim();
     try {
-      const credential = authMode === "register"
-        ? await createUserWithEmailAndPassword(auth, email, password)
-        : await signInWithEmailAndPassword(auth, email, password);
-      const displayName = String(form.get("displayName") || "").trim();
-      if (authMode === "register" && displayName) await updateProfile(credential.user, { displayName });
-      const token = await getIdToken(credential.user, true);
-      local.set("novatube_token", token);
+      if (firebaseConfigured) {
+        const credential = authMode === "register"
+          ? await createUserWithEmailAndPassword(auth, email, password)
+          : await signInWithEmailAndPassword(auth, email, password);
+        if (authMode === "register" && displayName) await updateProfile(credential.user, { displayName });
+        const token = await getIdToken(credential.user, true);
+        const profile = {
+          id: credential.user.uid,
+          uid: credential.user.uid,
+          email: credential.user.email || email,
+          display_name: credential.user.displayName || displayName || email.split("@")[0],
+          avatar_url: credential.user.photoURL || ""
+        };
+        local.set("novatube_token", token);
+        local.set("novatube_user", profile);
+        setUser(profile);
+      } else {
+        const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+        const body = authMode === "register" ? { email, password, displayName } : { email, password };
+        const data = await api(endpoint, { method: "POST", body: JSON.stringify(body) });
+        const profile = data.user;
+        local.set("novatube_token", data.token || "");
+        local.set("novatube_user", profile);
+        setUser(profile);
+      }
       setAuthOpen(false);
     } catch (e) {
-      setAuthError(e?.code === "auth/invalid-credential" ? "Invalid email or password." : (e?.message || "Authentication failed."));
+      const code = e?.code || "";
+      setAuthError(code === "auth/invalid-credential" ? "Invalid email or password." : (e?.message || "Authentication failed."));
     }
   }
 
@@ -553,10 +573,10 @@ function App() {
 
           {active === "subscriptions" && (
             <>
-              <section className="section-head"><div><h2>Subscriptions</h2><span>{subSet.size} creators followed.</span></div></section>
+              <section className="section-head"><div><h2>Subscriptions <span className="version-badge">V1</span></h2><span>{subSet.size} creators followed · V1 verification build</span></div></section>
               {!user && <Empty title="Sign in to sync subscriptions" text="Guest subscriptions stay on this device. An account syncs them through the NovaTube API." action="Sign in" onAction={()=>setAuthOpen(true)}/>}
               {user && !subscriptions.length && <Empty title="Your feed is empty" text="Open a creator and subscribe to start building this page."/>}
-              <div className="creator-list">{subscriptions.map((s)=><button key={s.channelId} className="creator-row" onClick={()=>openChannel(s.channelId)}><span className="creator-avatar">{(s.channelTitle||"N")[0]}</span><span><b>{s.channelTitle}</b><small>Subscribed creator</small></span></button>)}</div>
+              <div className="creator-list">{subscriptions.map((s)=><button key={s.channelId} className="creator-row" onClick={()=>openChannel(s.channelId)}><span className="creator-avatar">{s.channelThumbnail ? <img src={s.channelThumbnail} alt="" loading="lazy" /> : (s.channelTitle||"N")[0]}</span><span><b>{s.channelTitle}</b><small>Subscribed creator</small></span></button>)}</div>
             </>
           )}
 
