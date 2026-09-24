@@ -298,7 +298,7 @@ async function feed({ mode, q, pageToken }) {
     items: normalize(await addChannelLogos((search.items || []).map((item) => ({
       ...item,
       ...byId.get(item.id?.videoId)
-    }))),
+    })))),
     nextPageToken: search.nextPageToken || null
   };
 }
