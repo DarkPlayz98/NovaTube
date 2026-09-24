@@ -265,7 +265,7 @@ function App() {
     setLoading(true);
     setError("");
     setPageToken(null);
-    if ((offline || offlineMode) && !q) {
+    if (offline && offlineMode && !q) {
       const cached = local.get("novatube_cache_" + mode, []);
       if (cached.length) {
         if (mode === "shorts") { setShorts(cached); setShortIndex(0); }
@@ -485,7 +485,6 @@ function App() {
 
   const displayedVideos = useMemo(() => applyLocal(videos), [videos, notInterested, subscriptions]);
   const subSet = useMemo(() => new Set(subscriptions.map((x) => x.channelId)), [subscriptions]);
-  const currentShort = shorts[shortIndex];
 
   useEffect(() => {
     const root = shortRef.current;
@@ -533,11 +532,16 @@ function App() {
         </div>
       </header>
 
-      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={()=>location.reload()}>Retry</button></div>}\n\n      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={() => location.reload()}>Retry</button></div>}\n\n      <div className="layout">
+      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={()=>location.reload()}>Retry</button></div>}
+
+      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={() => location.reload()}>Retry</button></div>}
+
+      <div className="layout">
         <aside className="sidebar">
           {NAV.map(([id,label,icon]) => <button key={id} className={active===id ? "nav-item active" : "nav-item"} onClick={() => selectNav(id)}><span>{icon}</span>{label}</button>)}
           <div className="side-divider"/>
-          <button className="nav-item" onClick={() => setSettingsOpen(true)}><span>⚙</span>Settings</button>\n          <button className={offlineMode ? "nav-item active" : "nav-item"} onClick={() => { const next=!offlineMode; setOfflineMode(next); local.set("novatube_offline_mode",next); }}><span>⇩</span>{offlineMode ? "Offline on" : "Offline mode"}</button>
+          <button className="nav-item" onClick={() => setSettingsOpen(true)}><span>⚙</span>Settings</button>
+          <button className={offlineMode ? "nav-item active" : "nav-item"} onClick={() => { const next=!offlineMode; setOfflineMode(next); local.set("novatube_offline_mode",next); }}><span>⇩</span>{offlineMode ? "Offline on" : "Offline mode"}</button>
           <div className="side-cap"><b>{device.mode.toUpperCase()}</b><span>{device.cores} CPU · {device.ram} GB RAM</span></div>
         </aside>
 
@@ -634,7 +638,7 @@ function App() {
 
       <footer><span>NovaTube</span><span>Ad-free NovaTube interface · YouTube-powered discovery · Official embedded playback</span></footer>
 
-      {settingsOpen && <Modal onClose={()=>setSettingsOpen(false)}><Settings device={device} performance={performance} setPerformance={(x)=>{setPerformance(x);local.set("novatube_performance",x)}} user={user} onLogout={logout}/></Modal>}
+      {settingsOpen && <Modal onClose={()=>setSettingsOpen(false)}><Settings device={device} performance={performance} setPerformance={(x)=>{setPerformance(x);local.set("novatube_performance",x)}} offlineMode={offlineMode} setOfflineMode={(x)=>{setOfflineMode(x);local.set("novatube_offline_mode",x)}} user={user} onLogout={logout}/></Modal>}
       {authOpen && <Modal onClose={()=>setAuthOpen(false)}><Auth mode={authMode} setMode={setAuthMode} onSubmit={submitAuth} onGoogle={signInGoogle} error={authError} firebaseReady={firebaseReady}/></Modal>}
       {loading && <div className="loading-pill">Loading…</div>}
     </div>
@@ -680,10 +684,11 @@ function ChannelPage({channel,subscribed,onSubscribe,onOpen,lite,onChannel}) {
   </div>;
 }
 
-function Settings({device,performance,setPerformance,user,onLogout}) {
+function Settings({device,performance,setPerformance,offlineMode,setOfflineMode,user,onLogout}) {
   return <div className="settings"><p className="eyebrow">NOVA SETTINGS</p><h2>Performance & account</h2>
     <div className="setting-card"><h3>Device profile</h3><div className="spec-grid"><span>Profile<b>{device.mode.toUpperCase()}</b></span><span>CPU<b>{device.cores} cores</b></span><span>RAM<b>{device.ram} GB</b></span><span>GPU<b>{String(device.gpu).slice(0,42)}</b></span><span>Network<b>{device.network}</b></span><span>Screen<b>{device.screen}</b></span></div></div>
-    <div className="setting-card"><h3>Offline mode</h3><button className={offlineMode ? "offline-toggle on" : "offline-toggle"} onClick={()=>{const next=!offlineMode;setOfflineMode(next);local.set("novatube_offline_mode",next)}}><span>{offlineMode ? "ON" : "OFF"}</span><b>{offlineMode ? "Use cached feeds when offline" : "Allow online refresh"}</b></button><p>NovaTube keeps recent feed items on this device so the interface still opens without a connection. YouTube playback still requires internet.</p></div>\n    <div className="setting-card"><h3>Performance mode</h3><div className="segmented">{["auto","lite","balanced","full"].map((x)=><button key={x} className={performance===x ? "selected":""} onClick={()=>setPerformance(x)}>{x}</button>)}</div><p>Auto detects capabilities before rendering the main interface. Lite reduces thumbnails, animation and media concurrency.</p></div>
+    <div className="setting-card"><h3>Offline mode</h3><button className={offlineMode ? "offline-toggle on" : "offline-toggle"} onClick={()=>{const next=!offlineMode;setOfflineMode(next);local.set("novatube_offline_mode",next)}}><span>{offlineMode ? "ON" : "OFF"}</span><b>{offlineMode ? "Use cached feeds when offline" : "Allow online refresh"}</b></button><p>NovaTube keeps recent feed items on this device and uses them automatically when you are offline. YouTube playback still requires internet.</p></div>
+    <div className="setting-card"><h3>Performance mode</h3><div className="segmented">{["auto","lite","balanced","full"].map((x)=><button key={x} className={performance===x ? "selected":""} onClick={()=>setPerformance(x)}>{x}</button>)}</div><p>Auto detects capabilities before rendering the main interface. Lite reduces thumbnails, animation and media concurrency.</p></div>
     <div className="setting-card"><h3>Account</h3>{user ? <><p>Signed in as <b>{user.display_name || user.displayName}</b>.</p><button className="danger-button" onClick={onLogout}>Sign out</button></> : <p>Guest mode keeps likes, saves, subscriptions and history on this device. Sign in adds server sync.</p>}</div>
   </div>;
 }
@@ -697,9 +702,3 @@ function Auth({mode,setMode,onSubmit,onGoogle,error,firebaseReady}) {
     <button className="text-button center" onClick={()=>setMode(mode==="login"?"register":"login")}>{mode==="login" ? "Create a new account" : "I already have an account"}</button>
   </div>;
 }
-
-function Empty({title,text,action,onAction}) {
-  return <div className="empty"><div className="empty-icon">N</div><h3>{title}</h3><p>{text}</p>{action && <button className="primary-wide compact" onClick={onAction}>{action}</button>}</div>;
-}
-
-createRoot(document.getElementById("root")).render(<App />);
