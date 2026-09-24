@@ -209,6 +209,11 @@ function App() {
   const lite = performance === "lite" || (performance === "auto" && device?.mode === "lite");
 
   useEffect(() => {
+    const handleOnline = () => setOffline(false);
+    const handleOffline = () => setOffline(true);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
     detectDevice().then(setDevice);
     if (!firebaseConfigured) return;
     const unsubscribe = onAuthStateChanged(auth, async (account) => {
@@ -234,7 +239,11 @@ function App() {
         setAuthError(e.message || "Firebase sign-in failed.");
       }
     });
-    return () => unsubscribe();
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      unsubscribe?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -256,12 +265,29 @@ function App() {
     setLoading(true);
     setError("");
     setPageToken(null);
+    if ((offline || offlineMode) && !q) {
+      const cached = local.get("novatube_cache_" + mode, []);
+      if (cached.length) {
+        if (mode === "shorts") { setShorts(cached); setShortIndex(0); }
+        else if (mode === "live") setLive(cached);
+        else setVideos(cached);
+        setError(offline ? "Offline mode · showing cached content" : "Offline mode is enabled · showing cached content");
+        setLoading(false);
+        return;
+      }
+      if (mode === "home") setVideos(savedVideos.length ? savedVideos : FALLBACK);
+      if (mode === "shorts") setShorts(savedVideos.length ? savedVideos : FALLBACK);
+      setError("No cached feed yet. Connect once to cache videos for offline use.");
+      setLoading(false);
+      return;
+    }
     try {
       const data = await api("/api/feed?mode=" + encodeURIComponent(mode) + (q ? "&q=" + encodeURIComponent(q) : ""));
       const items = data.items || [];
       if (mode === "shorts") { setShorts(items); setShortIndex(0); }
       else if (mode === "live") setLive(items);
       else setVideos(items);
+      local.set("novatube_cache_" + mode, items.slice(0, 50));
       setPageToken(data.nextPageToken || null);
     } catch (e) {
       setError(e.message);
@@ -507,7 +533,7 @@ function App() {
         </div>
       </header>
 
-      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={()=>location.reload()}>Retry</button></div>}\n\n      <div className="layout">
+      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={()=>location.reload()}>Retry</button></div>}\n\n      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={() => location.reload()}>Retry</button></div>}\n\n      <div className="layout">
         <aside className="sidebar">
           {NAV.map(([id,label,icon]) => <button key={id} className={active===id ? "nav-item active" : "nav-item"} onClick={() => selectNav(id)}><span>{icon}</span>{label}</button>)}
           <div className="side-divider"/>
