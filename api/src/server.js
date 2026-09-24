@@ -194,6 +194,27 @@ function durationText(sec) {
     ? `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
     : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
+async function addChannelLogos(items) {
+  const channelIds = [...new Set(items.map((item) => item.snippet?.channelId).filter(Boolean))];
+  if (!channelIds.length) return items;
+  const data = await yt("channels", {
+    part: "snippet",
+    id: channelIds.join(",")
+  });
+  const logos = new Map((data.items || []).map((item) => [
+    item.id,
+    item.snippet?.thumbnails?.default?.url ||
+      item.snippet?.thumbnails?.medium?.url ||
+      item.snippet?.thumbnails?.high?.url || ""
+  ]));
+  return items.map((item) => ({
+    ...item,
+    snippet: {
+      ...item.snippet,
+      channelThumbnail: logos.get(item.snippet?.channelId) || ""
+    }
+  }));
+}
 function normalize(items) {
   return items.map((item) => {
     const id = item.id?.videoId || item.id;
@@ -215,6 +236,7 @@ function normalize(items) {
       commentsCount: Number(item.statistics?.commentCount || 0),
       live: item.snippet.liveBroadcastContent === "live",
       liveDetails: item.liveStreamingDetails || null,
+      channelThumbnail: item.snippet.channelThumbnail || "",
       tags: item.snippet.tags || []
     };
   }).filter(Boolean);
@@ -233,7 +255,7 @@ async function feed({ mode, q, pageToken }) {
       ...(pageToken ? { pageToken } : {})
     });
     return {
-      items: normalize(popular.items || []),
+      items: normalize(await addChannelLogos(popular.items || [])),
       nextPageToken: popular.nextPageToken || null
     };
   }
@@ -273,7 +295,7 @@ async function feed({ mode, q, pageToken }) {
   const byId = new Map((details.items || []).map((item) => [item.id, item]));
 
   return {
-    items: normalize((search.items || []).map((item) => ({
+    items: normalize(await addChannelLogos((search.items || []).map((item) => ({
       ...item,
       ...byId.get(item.id?.videoId)
     }))),
