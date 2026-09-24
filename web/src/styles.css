@@ -2004,3 +2004,21 @@ footer {
     padding: 9px 1px 3px;
   }
 }
+
+
+/* Offline mode polish */
+.offline-bar{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:center;gap:9px;
+  min-height:36px;padding:7px 12px;background:#eef3ff;color:#183b7a;border-bottom:1px solid #d9e2f8;
+  font-size:12px;line-height:1.2;
+}
+.offline-dot{font-size:9px}.offline-bar button{border:0;background:transparent;color:inherit;font-weight:700;padding:5px 8px;border-radius:9px}
+.offline-bar button:active{background:#dce7ff}
+.offline-toggle{width:100%;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid #dedee3;background:#f7f7f9;border-radius:14px;padding:12px;color:inherit}
+.offline-toggle span{min-width:42px;text-align:center;border-radius:999px;padding:5px 8px;background:#e3e4e8;font-size:11px;font-weight:800}
+.offline-toggle.on{background:#eef3ff;border-color:#cbd9fa}.offline-toggle.on span{background:#315fce;color:white}
+.offline-toggle b{font-size:13px}
+@media(max-width:780px){
+  .offline-bar{justify-content:space-between;padding-inline:11px;min-height:34px;font-size:11px}
+  .offline-bar span:nth-child(2){flex:1}
+}
