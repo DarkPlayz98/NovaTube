@@ -1273,8 +1273,7 @@ footer {
   font-size: 12px;
 }
 
-.mode-lite *,
-@media (prefers-reduced-motion: reduce) {
+.mode-lite * {
   scroll-behavior: auto !important;
 }
 
