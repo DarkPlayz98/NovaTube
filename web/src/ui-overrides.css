@@ -443,3 +443,38 @@ body {
     background: rgba(16,17,20,.96);
   }
 }
+
+
+.google-button {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--nt-border);
+  border-radius: 14px;
+  background: var(--nt-card);
+  color: var(--nt-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.google-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0;
+  color: var(--nt-muted);
+  font-size: 12px;
+}
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  flex: 1;
+  background: var(--nt-border);
+}
+.auth-divider span {
+  padding: 0 4px;
+}
