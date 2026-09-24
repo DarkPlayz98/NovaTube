@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
-const API = (import.meta.env.VITE_API_URL || "/api").replace(/\/$/, "");
+const API = (import.meta.env.VITE_API_URL || "https://nova-tube-amber.vercel.app").replace(/\/$/, "");
 const FALLBACK = [
   { id:"M7lc1UVf-VE", title:"YouTube IFrame Player API demo", channelTitle:"Google Developers", channelId:"", views:0, duration:0, durationText:"", thumbnail:"https://i.ytimg.com/vi/M7lc1UVf-VE/hqdefault.jpg", tags:["technology"] }
 ];
