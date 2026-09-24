@@ -4,6 +4,8 @@ import cors from "cors";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import pg from "pg";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth as getFirebaseAuth } from "firebase-admin/auth";
 
 const { Pool } = pg;
 const app = express();
@@ -17,6 +19,21 @@ const pool = process.env.DATABASE_URL
   : null;
 const cache = new Map();
 const jwtSecret = process.env.JWT_SECRET || "novatube-development-secret";
+const firebaseAdminReady = Boolean(
+  process.env.FIREBASE_PROJECT_ID &&
+  process.env.FIREBASE_CLIENT_EMAIL &&
+  process.env.FIREBASE_PRIVATE_KEY
+);
+const firebaseAdminApp = firebaseAdminReady
+  ? (getApps()[0] || initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+      })
+    }))
+  : null;
+const firebaseAuth = firebaseAdminApp ? getFirebaseAuth(firebaseAdminApp) : null;
 const CACHE_TTL = 45_000;
 const allowedOrigins = webOrigin === "*" ? null : new Set(webOrigin.split(",").map((x) => x.trim()).filter(Boolean));
 
@@ -40,11 +57,14 @@ async function initDb() {
     create table if not exists users (
       id bigserial primary key,
       email text unique not null,
-      password_hash text not null,
+      password_hash text not null default '',
       display_name text not null,
       avatar_url text,
-      created_at timestamptz not null default now()
+      created_at timestamptz not null default now(),
+      firebase_uid text unique
     );
+    alter table users add column if not exists firebase_uid text unique;
+    alter table users alter column password_hash set default '';
     create table if not exists subscriptions (
       user_id bigint not null references users(id) on delete cascade,
       channel_id text not null,
@@ -87,10 +107,55 @@ function tokenFrom(req) {
   const value = req.headers.authorization || "";
   return value.startsWith("Bearer ") ? value.slice(7) : null;
 }
-function auth(req, _res, next) {
+async function ensureFirebaseUser(decoded) {
+  if (!pool) throw new Error("DATABASE_NOT_CONFIGURED");
+  const uid = String(decoded.uid || "");
+  const email = String(decoded.email || "").trim().toLowerCase();
+  if (!uid || !email) throw new Error("Firebase account has no verified email.");
+
+  const existing = await sql(
+    "select id,email,display_name,avatar_url,firebase_uid from users where firebase_uid=$1 or email=$2 limit 1",
+    [uid, email]
+  );
+  if (existing.rows[0]) {
+    const row = existing.rows[0];
+    const displayName = String(decoded.name || row.display_name || email.split("@")[0] || "NovaTube user").slice(0, 60);
+    const avatarUrl = String(decoded.picture || row.avatar_url || "").slice(0, 1000);
+    const updated = await sql(
+      "update users set firebase_uid=$1,email=$2,display_name=$3,avatar_url=$4 where id=$5 returning id,email,display_name,avatar_url",
+      [uid, email, displayName, avatarUrl, row.id]
+    );
+    return updated.rows[0];
+  }
+
+  const inserted = await sql(
+    "insert into users(email,password_hash,display_name,avatar_url,firebase_uid) values($1,'',$2,$3,$4) returning id,email,display_name,avatar_url",
+    [email, String(decoded.name || email.split("@")[0] || "NovaTube user").slice(0, 60), String(decoded.picture || "").slice(0, 1000), uid]
+  );
+  return inserted.rows[0];
+}
+
+async function auth(req, _res, next) {
   const token = tokenFrom(req);
-  if (token) {
-    try { req.user = jwt.verify(token, jwtSecret); } catch { req.user = null; }
+  if (!token) return next();
+
+  try {
+    req.user = jwt.verify(token, jwtSecret);
+    return next();
+  } catch {}
+
+  if (!firebaseAuth) return next();
+  try {
+    const decoded = await firebaseAuth.verifyIdToken(token);
+    const user = await ensureFirebaseUser(decoded);
+    req.user = {
+      id: user.id,
+      email: user.email,
+      displayName: user.display_name,
+      firebaseUid: decoded.uid
+    };
+  } catch {
+    req.user = null;
   }
   next();
 }
