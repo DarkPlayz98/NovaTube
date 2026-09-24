@@ -478,3 +478,84 @@ body {
 .auth-divider span {
   padding: 0 4px;
 }
+
+
+/* NovaTube branding + search refinement */
+.brand-mark {
+  display: block;
+  object-fit: cover;
+  flex: 0 0 auto;
+  background: #111318;
+}
+
+.boot-logo {
+  display: block;
+  object-fit: cover;
+  background: #111318;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+}
+
+.search-banner {
+  margin: 0 28px 24px;
+  max-width: 900px;
+}
+
+.search-banner form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 6px 7px 6px 16px;
+  border: 1px solid var(--nt-border);
+  border-radius: 18px;
+  background: var(--nt-card);
+  box-shadow: var(--nt-shadow);
+}
+
+.search-banner-icon {
+  color: var(--nt-muted);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.search-banner input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--nt-ink);
+  font: inherit;
+}
+
+.search-banner button {
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--nt-primary);
+  color: white;
+  font-weight: 800;
+}
+
+@media (max-width: 780px) {
+  .search-banner {
+    margin: 0 12px 20px;
+  }
+  .search-banner form {
+    min-height: 48px;
+    border-radius: 16px;
+  }
+  .search-banner button {
+    padding-inline: 15px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .search-banner form {
+    background: var(--nt-card);
+  }
+  .search-banner input {
+    color: #e5e1e9;
+  }
+}
