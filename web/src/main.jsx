@@ -1,6 +1,18 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
+import {
+  auth,
+  firebaseConfigured,
+  googleProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  onAuthStateChanged,
+  signOut,
+  getIdToken
+} from "./firebase.js";
 
 const API = (import.meta.env.VITE_API_URL || "https://nova-tube-amber.vercel.app").replace(/\/$/, "");
 const FALLBACK = [
@@ -175,6 +187,7 @@ function App() {
   const [authMode, setAuthMode] = useState("login");
   const [authError, setAuthError] = useState("");
   const [user, setUser] = useState(() => local.get("novatube_user", null));
+  const [firebaseReady, setFirebaseReady] = useState(firebaseConfigured);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [performance, setPerformance] = useState(() => local.get("novatube_performance", "auto"));
   const [shortIndex, setShortIndex] = useState(0);
@@ -185,6 +198,31 @@ function App() {
 
   useEffect(() => {
     detectDevice().then(setDevice);
+    if (!firebaseConfigured) return;
+    const unsubscribe = onAuthStateChanged(auth, async (account) => {
+      if (!account) {
+        local.set("novatube_token", "");
+        local.set("novatube_user", null);
+        setUser(null);
+        return;
+      }
+      try {
+        const token = await getIdToken(account, true);
+        const profile = {
+          id: account.uid,
+          uid: account.uid,
+          email: account.email || "",
+          display_name: account.displayName || account.email?.split("@")[0] || "NovaTube user",
+          avatar_url: account.photoURL || ""
+        };
+        local.set("novatube_token", token);
+        local.set("novatube_user", profile);
+        setUser(profile);
+      } catch (e) {
+        setAuthError(e.message || "Firebase sign-in failed.");
+      }
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -343,22 +381,43 @@ function App() {
   async function submitAuth(e) {
     e.preventDefault();
     setAuthError("");
+    if (!firebaseConfigured) {
+      setAuthError("Firebase Auth is not configured. Add the VITE_FIREBASE_* variables to the web deployment.");
+      return;
+    }
     const form = new FormData(e.currentTarget);
-    const body = {
-      email: String(form.get("email") || ""),
-      password: String(form.get("password") || ""),
-      displayName: String(form.get("displayName") || "NovaTube user")
-    };
+    const email = String(form.get("email") || "").trim();
+    const password = String(form.get("password") || "");
     try {
-      const data = await api("/api/auth/" + authMode, {method:"POST", body:JSON.stringify(body)});
-      local.set("novatube_token", data.token);
-      local.set("novatube_user", data.user);
-      setUser(data.user);
+      const credential = authMode === "register"
+        ? await createUserWithEmailAndPassword(auth, email, password)
+        : await signInWithEmailAndPassword(auth, email, password);
+      const displayName = String(form.get("displayName") || "").trim();
+      if (authMode === "register" && displayName) await updateProfile(credential.user, { displayName });
+      const token = await getIdToken(credential.user, true);
+      local.set("novatube_token", token);
       setAuthOpen(false);
-    } catch (e) { setAuthError(e.message); }
+    } catch (e) {
+      setAuthError(e?.code === "auth/invalid-credential" ? "Invalid email or password." : (e?.message || "Authentication failed."));
+    }
   }
 
-  function logout() {
+  async function signInGoogle() {
+    setAuthError("");
+    if (!firebaseConfigured) {
+      setAuthError("Firebase Auth is not configured. Add the VITE_FIREBASE_* variables to the web deployment.");
+      return;
+    }
+    try {
+      await signInWithPopup(auth, googleProvider);
+      setAuthOpen(false);
+    } catch (e) {
+      setAuthError(e?.code === "auth/popup-closed-by-user" ? "Google sign-in was cancelled." : (e?.message || "Google sign-in failed."));
+    }
+  }
+
+  async function logout() {
+    try { if (firebaseConfigured) await signOut(auth); } catch {}
     local.set("novatube_token","");
     local.set("novatube_user",null);
     setUser(null);
@@ -512,7 +571,7 @@ function App() {
       <footer><span>NovaTube</span><span>Ad-free NovaTube interface · YouTube-powered discovery · Official embedded playback</span></footer>
 
       {settingsOpen && <Modal onClose={()=>setSettingsOpen(false)}><Settings device={device} performance={performance} setPerformance={(x)=>{setPerformance(x);local.set("novatube_performance",x)}} user={user} onLogout={logout}/></Modal>}
-      {authOpen && <Modal onClose={()=>setAuthOpen(false)}><Auth mode={authMode} setMode={setAuthMode} onSubmit={submitAuth} error={authError}/></Modal>}
+      {authOpen && <Modal onClose={()=>setAuthOpen(false)}><Auth mode={authMode} setMode={setAuthMode} onSubmit={submitAuth} onGoogle={signInGoogle} error={authError} firebaseReady={firebaseReady}/></Modal>}
       {loading && <div className="loading-pill">Loading…</div>}
     </div>
   );
@@ -565,9 +624,12 @@ function Settings({device,performance,setPerformance,user,onLogout}) {
   </div>;
 }
 
-function Auth({mode,setMode,onSubmit,error}) {
+function Auth({mode,setMode,onSubmit,onGoogle,error,firebaseReady}) {
   return <div className="auth"><p className="eyebrow">NOVA ACCOUNT</p><h2>{mode==="login" ? "Welcome back" : "Create your account"}</h2><p className="muted">{mode==="login" ? "Sync your NovaTube activity across devices." : "Keep subscriptions, actions, comments and history server-side."}</p>
-    <form onSubmit={onSubmit} className="auth-form">{mode==="register" && <input name="displayName" placeholder="Display name" required/>}<input name="email" type="email" placeholder="Email" required/><input name="password" type="password" placeholder="Password (8+ characters)" minLength="8" required/>{error && <div className="error-text">{error}</div>}<button className="primary-wide">{mode==="login" ? "Sign in" : "Create account"}</button></form>
+    <button className="google-button" type="button" onClick={onGoogle} disabled={!firebaseReady}>Continue with Google</button>
+    <div className="auth-divider"><span>or</span></div>
+    <form onSubmit={onSubmit} className="auth-form">{mode==="register" && <input name="displayName" placeholder="Display name" required/>}<input name="email" type="email" placeholder="Email" required/><input name="password" type="password" placeholder="Password (8+ characters)" minLength="8" required/>{error && <div className="error-text">{error}</div>}<button className="primary-wide" disabled={!firebaseReady}>{mode==="login" ? "Sign in with email" : "Create account"}</button></form>
+    {!firebaseReady && <p className="error-text">Firebase Auth is not configured for this deployment yet.</p>}
     <button className="text-button center" onClick={()=>setMode(mode==="login"?"register":"login")}>{mode==="login" ? "Create a new account" : "I already have an account"}</button>
   </div>;
 }
