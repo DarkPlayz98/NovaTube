@@ -39,3 +39,4 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html")))
   );
 });
+// NovaTube cache refresh: 2026-09-24
