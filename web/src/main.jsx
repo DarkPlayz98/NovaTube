@@ -534,8 +534,6 @@ function App() {
 
       {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={()=>location.reload()}>Retry</button></div>}
 
-      {offline && <div className="offline-bar"><span className="offline-dot">●</span><span><b>Offline mode</b> · Cached NovaTube content</span><button onClick={() => location.reload()}>Retry</button></div>}
-
       <div className="layout">
         <aside className="sidebar">
           {NAV.map(([id,label,icon]) => <button key={id} className={active===id ? "nav-item active" : "nav-item"} onClick={() => selectNav(id)}><span>{icon}</span>{label}</button>)}
