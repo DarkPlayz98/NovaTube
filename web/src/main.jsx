@@ -664,8 +664,8 @@ function Auth({mode,setMode,onSubmit,onGoogle,error,firebaseReady}) {
   return <div className="auth"><p className="eyebrow">NOVA ACCOUNT</p><h2>{mode==="login" ? "Welcome back" : "Create your account"}</h2><p className="muted">{mode==="login" ? "Sync your NovaTube activity across devices." : "Keep subscriptions, actions, comments and history server-side."}</p>
     <button className="google-button" type="button" onClick={onGoogle} disabled={!firebaseReady}>Continue with Google</button>
     <div className="auth-divider"><span>or</span></div>
-    <form onSubmit={onSubmit} className="auth-form">{mode==="register" && <input name="displayName" placeholder="Display name" required/>}<input name="email" type="email" placeholder="Email" required/><input name="password" type="password" placeholder="Password (8+ characters)" minLength="8" required/>{error && <div className="error-text">{error}</div>}<button className="primary-wide" disabled={!firebaseReady}>{mode==="login" ? "Sign in with email" : "Create account"}</button></form>
-    {!firebaseReady && <p className="error-text">Firebase Auth is not configured for this deployment yet.</p>}
+    <form onSubmit={onSubmit} className="auth-form">{mode==="register" && <input name="displayName" placeholder="Display name" required/>}<input name="email" type="email" placeholder="Email" required/><input name="password" type="password" placeholder="Password (8+ characters)" minLength="8" required/>{error && <div className="error-text">{error}</div>}<button className="primary-wide">{mode==="login" ? "Sign in with email" : "Create account"}</button></form>
+    {!firebaseReady && <p className="muted auth-note">Email/password works without Firebase. Google sign-in needs the VITE_FIREBASE_* variables on Vercel.</p>}
     <button className="text-button center" onClick={()=>setMode(mode==="login"?"register":"login")}>{mode==="login" ? "Create a new account" : "I already have an account"}</button>
   </div>;
 }
